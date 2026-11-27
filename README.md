@@ -1,83 +1,89 @@
 # Mafia Rooms
 
-Онлайн-комнаты для игры в «Мафию»: видео/голос через WebRTC mesh, роли, фазы, таймеры и голосование. Хост ведет партию, сайт автоматизирует рутину. Без регистрации и платных сервисов.
+Online rooms for the Mafia party game with video and voice over WebRTC, roles, game phases, timers and voting. The host runs the game, and the site handles the routine. No sign-up and no paid services.
 
-## Стек
+## Features
 
-- Next.js 15 + React 19 + TypeScript + Tailwind CSS 4
-- Custom Node.js server + Socket.IO (realtime + WebRTC signaling)
-- Native WebRTC (mesh, STUN only, без TURN)
-- Zustand (клиентское состояние)
-- In-memory storage (комнаты живут, пока работает сервер)
+- Create a room and share an invite link. Players join with a nickname.
+- Video and voice chat between all players (WebRTC mesh).
+- Role setup (Mafia, Detective, Doctor) and timer settings in the lobby.
+- Each player sees only their own role. The host can reveal all roles in the host panel.
+- Phases: night → day → voting, with discussion and speech timers.
+- Voting: living players pick a candidate, the host closes the vote and confirms the elimination.
+- Results screen with everyone's roles at the end of the game.
 
-## Запуск
+## Tech stack
+
+- Next.js 15, React 19, TypeScript, Tailwind CSS 4
+- Custom Node.js server with Socket.IO (realtime game state and WebRTC signaling)
+- Native WebRTC (mesh, STUN only)
+- Zustand (client state)
+- In-memory storage (rooms live while the server is running)
+
+## Getting started
 
 ```bash
 npm install
 npm run dev
 ```
 
-Открыть <http://localhost:3000>.
+Open <http://localhost:3000>.
 
-Продакшен-сборка:
+Production build:
 
 ```bash
 npm run build
 npm start
 ```
 
-## Как играть
+## How to play
 
-1. На главной введи никнейм и нажми «Создать комнату».
-2. Скопируй ссылку в лобби и отправь друзьям.
-3. Друзья заходят по ссылке, указывают никнейм, разрешают камеру/микрофон.
-4. Хост настраивает роли (мафия, комиссар, доктор) и таймеры, жмет «Начать игру».
-5. Каждый видит только свою роль. Хост видит все роли (панель ведущего → «Показать роли»).
-6. Хост ведет фазы: ночь → день → голосование. Ночью хост вручную отмечает убитого
-   (если доктор спас — просто не убивает). Днем — таймеры обсуждения и речи.
-7. Голосование: живые выбирают кандидата, хост завершает и подтверждает изгнание.
-8. Хост завершает игру выбором победителя — всем показывается экран результата с ролями.
+1. Enter a nickname on the home page and click "Create room".
+2. Copy the link from the lobby and send it to friends.
+3. Friends open the link, enter a nickname and allow camera and microphone access.
+4. The host sets up roles and timers and clicks "Start game".
+5. The host moves the game through phases. At night the host marks who was killed (if the Doctor saved them, nobody is marked). During the day there are discussion and speech timers.
+6. Voting: living players choose a candidate, the host ends the vote and confirms the elimination.
+7. The host ends the game by choosing the winning side, and everyone sees the results screen.
 
-## Тест локально
+## Testing locally
 
-Одна камера конфликтует между вкладками одного браузера, поэтому:
+One camera can't be shared between tabs of the same browser, so use different browsers or devices: Chrome, Firefox, a phone, an incognito window or a second laptop.
 
-- игрок 1 — Chrome, игрок 2 — Firefox, игрок 3 — телефон, игрок 4 — инкогнито/второй ноутбук.
+## Playing with friends over the internet
 
-## Тест с друзьями через интернет (Cloudflare Tunnel)
-
-Камера/микрофон в браузере требуют HTTPS (или localhost), поэтому нужен туннель:
+Browsers allow camera and microphone only over HTTPS (or on localhost), so use a tunnel, for example Cloudflare Tunnel:
 
 ```bash
 npm run dev
 cloudflared tunnel --url http://localhost:3000
 ```
 
-Получишь HTTPS-ссылку вида `https://xxx.trycloudflare.com` — создай комнату и раздай invite-link.
+You'll get an HTTPS link like `https://xxx.trycloudflare.com`. Create a room there and share the invite link.
 
-## Ограничения MVP
+## MVP limitations
 
-- WebRTC mesh: комфортно 4–6 игроков, максимум 8.
-- Нет TURN-сервера: в некоторых корпоративных/мобильных сетях видео может не соединиться.
-- Комнаты в памяти: рестарт сервера удаляет комнаты.
-- Ночные действия мафии/комиссара/доктора хост ведет вручную (голосом), сайт помогает статусами.
-- Победа выбирается хостом вручную.
+- WebRTC mesh works best with 4–6 players, 8 at most.
+- No TURN server, so video may not connect on some corporate or mobile networks.
+- Rooms are stored in memory and disappear when the server restarts.
+- Night actions of the Mafia, Detective and Doctor are handled by the host by voice. The site only shows statuses.
+- The host picks the winner manually.
 
-## Структура
+## Project structure
 
 ```text
 server/
   index.ts               # custom Next.js server + Socket.IO
-  socket.ts              # все Socket.IO события (комнаты, игра, таймеры, голосование, signaling)
-  rooms/room.manager.ts  # in-memory состояние комнат, вся игровая логика
-  game/role.service.ts   # генерация и валидация ролей
+  socket.ts              # Socket.IO events: rooms, game, timers, voting, signaling
+  rooms/room.manager.ts  # in-memory room state and game logic
+  game/role.service.ts   # role generation and validation
 src/
-  shared/types.ts        # общие типы клиент/сервер
-  shared/roles.ts        # тексты ролей и фаз
+  shared/types.ts        # types shared by client and server
+  shared/roles.ts        # role and phase texts
   lib/socket.ts          # Socket.IO client singleton
   lib/store.ts           # Zustand store
   lib/webrtc.ts          # PeerManager: WebRTC mesh
-  app/                   # страницы: главная, /room/[roomId]
+  app/                   # pages: home, /room/[roomId]
   features/
     room/                # PreJoin, Lobby, SettingsPanel, RoomClient
     game/                # GameView, RoleCard, HostPanel, Results
